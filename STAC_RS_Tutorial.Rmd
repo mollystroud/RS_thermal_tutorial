@@ -1,0 +1,150 @@
+---
+title: "LST_STAC_Tutorial"
+author: "Molly Stroud"
+date: "2026-01-29"
+output: html_document
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+This code provides and example of accessing a SpatioTemporal Asset
+Catalog (STAC) via the Microsoft Planetary Computer. Here, we access
+Landsat 8 and 9 thermal data over Carvins Cove Reservoir in Virginia.
+For more information on STACs and tutorials, visit:
+<https://stacspec.org/en>
+
+# Load necessary packages
+
+First, we will load in our required libraries. rstac is the primary STAC
+package in R, and we use gdalcubes to handle the data.
+
+```{r libraries}
+pacman::p_load(rstac, gdalcubes, stars, dplyr, sf)
+gdalcubes::gdalcubes_options(parallel = TRUE)
+```
+
+# Access STAC
+
+We will use the Microsoft Planetary Computer to access Landsat data. The
+Planetary Computer hosts many other datasets too, you can explore them
+here: <https://planetarycomputer.microsoft.com/catalog>
+
+```{r stac}
+ls <- stac("https://planetarycomputer.microsoft.com/api/stac/v1")
+```
+
+# Set area and date of interest
+
+Before searching for imagery, we will specify a bounding box over our
+area of interest. Here, I've used a bounding box for Carvins Cove, but
+feel free to put in your own area! We will use the Landsat Collection 2
+Level 2 Science Product. For more info, see:
+<https://www.usgs.gov/landsat-missions/landsat-collection-2-level-2-science-products>
+
+```{r set parameters, echo=FALSE}
+bbox <- c(xmin = -79.9856, 
+          ymin = 37.3613, 
+          xmax = -79.9368, 
+          ymax = 37.4113)
+
+# start and end date, formatted correctly
+start_date <- "2024-07-10"
+end_date <- "2024-07-15"
+
+```
+
+# Search for imagery
+
+Now we need to search for items in our area of interest using the
+stac_search function! We can access the STAC to see what imagery is
+available, and we also filter out scenes with high cloud cover.
+
+This will output the images in this time frame as well as the available
+assets (bands) and fields the images contain.
+
+```{r get items}
+items <- ls |>
+    stac_search(collections = "landsat-c2-l2",
+                bbox = bbox,
+                datetime = paste(start_date, end_date, sep="/"),
+                limit = 100) |>
+    ext_query("eo:cloud_cover" < 20) |> #filter for cloud cover
+    post_request() |>
+    items_sign(sign_fn = sign_planetary_computer()) |> # needed when using planetary computer
+    items_fetch()
+print(items)
+```
+
+# Set up gdalcubes for handling data
+
+Now, we use the gdalcubes packages define a 'cube view' of our area of
+interest. We define our target projection, which is very helpful because
+Landsat's original projection uses meters and UTM zones, as well as our
+spatial and temporal resolutions.
+
+Then, using the items variable we created earlier with the list of
+available imagery, we create an image collection and select only lwir11
+(Landsat's thermal band). This saves us a lot of time, because instead
+of downloading the entire Landsat image with every band, we can just
+download the thermal band.
+
+```{r define cube space & collection, warning=FALSE}
+# define the cube space
+cube <- cube_view(srs = "EPSG:4326",
+                  extent = list(t0 = start_date, 
+                                t1 = end_date,
+                                left = bbox[1], 
+                                right = bbox[3],
+                                top = bbox[4], 
+                                bottom = bbox[2]),
+                  dx = 0.0003, # ~30 m resolution, in degrees
+                  dy = 0.0003, 
+                  dt = "P8D", # 8 day revisit
+                  aggregation = "median", 
+                  resampling = "average")
+
+# create stac image collection
+col <- stac_image_collection(items$features,
+                              asset_names = c("lwir11"),
+                               url_fun = identity)
+
+```
+
+# Download and visualize!
+
+Now, using our image collection and cube view, we will create a 'raster
+cube' that we can then read in as a stars object and visualize!
+
+Before downloading the image, we first rename the thermal band to a more
+intuitive name, and rescale the values to degrees Celsius since the raw
+thermal band values are not in degrees.
+
+It may take a few minutes to create the stars object, since we are
+moving the remote sensing imagery from the cloud to our devices.
+
+```{r create cube, warning = F}
+#make raster cube
+data <- raster_cube(image_collection = col, 
+                    view = cube)
+data <- rename_bands(data, lwir11 = "thermal") |>
+  apply_pixel(expr = "thermal * 0.00341802 - 124.15", names = "thermal_C")
+
+# make stars obj
+ls_stars <- st_as_stars(data)
+ggplot() +
+  geom_stars(data = ls_stars["thermal_C"]) +
+  facet_wrap(~time) +
+  theme_classic() +
+  scale_fill_viridis() +
+  labs(fill = "Temperature (C)") +
+  coord_fixed()
+```
+
+Feel free to change the date range or put in your own bounding box in
+the 'set parameters' chunk to get imagery across different dates or
+places!
