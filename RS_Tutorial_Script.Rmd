@@ -121,8 +121,8 @@ Now, using our image collection and cube view, we will create a 'raster
 cube' that we can then read in as a stars object and visualize!
 
 Before downloading the image, we first rename the thermal band to a more
-intuitive name, and rescale the values to degrees Celsius since the raw
-thermal band values are not in degrees.
+intuitive name, and rescale the raw thermal band values to degrees
+Celsius.
 
 It may take a few minutes to create the stars object, since we are
 moving the remote sensing imagery from the cloud to our devices.
@@ -141,7 +141,7 @@ ggplot() +
   facet_wrap(~time) +
   theme_classic() +
   scale_fill_viridis() +
-  labs(fill = "Temperature (C)") +
+  labs(fill = "Temperature (C)", x = element_blank(), y = element_blank()) +
   coord_fixed()
 ```
 
