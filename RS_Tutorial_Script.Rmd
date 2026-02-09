@@ -23,9 +23,9 @@ For more information on STACs and tutorials, visit:
 First, we will load in our required libraries. rstac is the primary STAC
 package in R, and we use gdalcubes to handle the data.
 
-```{r libraries}
+```{r libraries, echo = FALSE}
+install.packages("pacman")
 pacman::p_load(rstac, gdalcubes, stars, dplyr, sf, ggplot2, viridis)
-gdalcubes::gdalcubes_options(parallel = TRUE)
 ```
 
 # Access STAC
