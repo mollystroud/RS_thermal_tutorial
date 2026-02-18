@@ -8,10 +8,6 @@ editor_options:
     wrap: 72
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
-
 This code provides an example of accessing a SpatioTemporal Asset
 Catalog (STAC) via the Microsoft Planetary Computer. Here, we access
 Landsat 8 and 9 thermal data over Carvins Cove Reservoir in Virginia.
@@ -24,7 +20,7 @@ First, we will load in our required libraries. rstac is the primary STAC
 package in R, and we use gdalcubes to handle the data. We also load in
 some geospatial and plotting packages.
 
-```{r libraries, echo = FALSE}
+```{r libraries, echo = FALSE, message = FALSE}
 install.packages("pacman")
 pacman::p_load(rstac, gdalcubes, stars, dplyr, sf, ggplot2, viridis)
 ```
@@ -87,7 +83,8 @@ print(items)
 Now, we use the gdalcubes packages define a 'cube view' of our area of
 interest. We define our target projection, which is very helpful because
 Landsat's original projection uses meters and UTM zones, as well as our
-spatial and temporal resolutions.
+spatial and temporal resolutions, so we don't download more data than we
+are interested in.
 
 Then, using the items variable we created earlier with the list of
 available imagery, we create an image collection and select only lwir11
@@ -95,7 +92,7 @@ available imagery, we create an image collection and select only lwir11
 of downloading the entire Landsat image with every band, we can just
 download the thermal band.
 
-```{r define cube space & collection, warning=FALSE}
+```{r define cube space & collection, message = FALSE}
 # define the cube space
 cube <- cube_view(srs = "EPSG:4326",
                   extent = list(t0 = start_date, 
@@ -107,29 +104,30 @@ cube <- cube_view(srs = "EPSG:4326",
                   dx = 0.0003, # ~30 m resolution, in degrees
                   dy = 0.0003, 
                   dt = "P8D", # 8 day revisit
-                  aggregation = "median", 
-                  resampling = "average")
+                  aggregation = "median", # handle pixels containing data from multiple images
+                  resampling = "average") # resampling method for gdalwarp
 
 # create stac image collection
 col <- stac_image_collection(items$features,
                               asset_names = c("lwir11"),
-                               url_fun = identity)
+                              url_fun = identity)
 
 ```
 
 # Download and visualize!
 
 Now, using our image collection and cube view, we will create a 'raster
-cube' that we can then read in as a stars object and visualize!
-
-Before downloading the image, we first rename the thermal band to a more
-intuitive name, and rescale the raw thermal band values to degrees
+cube' that loads in the data from the image collection and cube view.
+Then, before downloading the image, we rename the thermal band to a more
+intuitive name and rescale the raw thermal band values to degrees
 Celsius.
 
-It may take a few minutes to create the stars object, since we are
-moving the remote sensing imagery from the cloud to our devices.
+Then, we download the data from the cloud by reading it in as a stars
+object, which is a kind of data cube. It may take a few minutes to
+create the stars object, since we are moving the remote sensing imagery
+from the cloud to our devices.
 
-```{r create cube, warning = F}
+```{r create cube}
 #make raster cube
 data <- raster_cube(image_collection = col, 
                     view = cube)
@@ -138,6 +136,11 @@ data <- rename_bands(data, lwir11 = "thermal") |>
 
 # make stars obj
 ls_stars <- st_as_stars(data)
+```
+
+Finally, we plot the data!
+
+```{r plot, warning = FALSE}
 ggplot() +
   geom_stars(data = ls_stars["thermal_C"]) +
   facet_wrap(~time) +
