@@ -20,7 +20,7 @@ First, we will load in our required libraries. rstac is the primary STAC
 package in R, and we use gdalcubes to handle the data. We also load in
 some geospatial and plotting packages.
 
-```{r libraries, echo = FALSE, message = FALSE}
+```{r libraries, echo = FALSE, warning = FALSE}
 install.packages("pacman")
 pacman::p_load(rstac, gdalcubes, stars, dplyr, sf, ggplot2, viridis)
 ```
@@ -92,7 +92,7 @@ available imagery, we create an image collection and select only lwir11
 of downloading the entire Landsat image with every band, we can just
 download the thermal band.
 
-```{r define cube space & collection, message = FALSE}
+```{r define cube space & collection, warning = FALSE}
 # define the cube space
 cube <- cube_view(srs = "EPSG:4326",
                   extent = list(t0 = start_date, 
