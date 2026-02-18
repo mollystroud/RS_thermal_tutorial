@@ -127,7 +127,7 @@ object, which is a kind of data cube. It may take a few minutes to
 create the stars object, since we are moving the remote sensing imagery
 from the cloud to our devices.
 
-```{r create cube}
+```{r create cube, warning = FALSE}
 #make raster cube
 data <- raster_cube(image_collection = col, 
                     view = cube)
