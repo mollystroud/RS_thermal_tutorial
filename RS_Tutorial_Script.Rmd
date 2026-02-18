@@ -12,7 +12,7 @@ editor_options:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-This code provides and example of accessing a SpatioTemporal Asset
+This code provides an example of accessing a SpatioTemporal Asset
 Catalog (STAC) via the Microsoft Planetary Computer. Here, we access
 Landsat 8 and 9 thermal data over Carvins Cove Reservoir in Virginia.
 For more information on STACs and tutorials, visit:
@@ -21,7 +21,8 @@ For more information on STACs and tutorials, visit:
 # Load necessary packages
 
 First, we will load in our required libraries. rstac is the primary STAC
-package in R, and we use gdalcubes to handle the data.
+package in R, and we use gdalcubes to handle the data. We also load in
+some geospatial and plotting packages.
 
 ```{r libraries, echo = FALSE}
 install.packages("pacman")
@@ -42,9 +43,7 @@ ls <- stac("https://planetarycomputer.microsoft.com/api/stac/v1")
 
 Before searching for imagery, we will specify a bounding box over our
 area of interest. Here, I've used a bounding box for Carvins Cove, but
-feel free to put in your own area! We will use the Landsat Collection 2
-Level 2 Science Product. For more info, see:
-<https://www.usgs.gov/landsat-missions/landsat-collection-2-level-2-science-products>
+feel free to put in your own area!
 
 ```{r set parameters, echo=FALSE}
 bbox <- c(xmin = -79.9856, 
@@ -61,8 +60,11 @@ end_date <- "2024-07-15"
 # Search for imagery
 
 Now we need to search for items in our area of interest using the
-stac_search function! We can access the STAC to see what imagery is
-available, and we also filter out scenes with high cloud cover.
+stac_search function! We will use the Landsat Collection 2 Level 2
+Science Product. For more info, see:
+<https://www.usgs.gov/landsat-missions/landsat-collection-2-level-2-science-products>.
+We can access the STAC to see what Landsat imagery is available, and we
+also filter out scenes with high cloud cover.
 
 This will output the images in this time frame as well as the available
 assets (bands) and fields the images contain.
